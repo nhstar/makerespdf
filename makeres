@@ -1,0 +1,88 @@
+#!/bin/bash
+
+set -e  # Exit on error
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 [-o output.pdf] [-c style.css] [-k] [-d] input.md"
+    echo "  -o output.pdf   Specify the output PDF file (default: input.pdf)"
+    echo "  -c style.css    Specify the CSS file for styling"
+    echo "  -k              Keep the temporary HTML file"
+    echo "  -d              Enable debug mode"
+    exit 1
+}
+
+# Parse command-line arguments
+keep=false
+debug=false
+output_file=""
+css_file="$HOME/.config/makeres/style.css"
+
+while getopts ":o:c:kd" opt; do
+    case ${opt} in
+        o ) output_file="$OPTARG" ;;
+        c ) css_file="$OPTARG" ;;
+        k ) keep=true ;;
+        d ) debug=true ;;
+        * ) usage ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Check if input file is provided
+if [ "$#" -ne 1 ]; then
+    usage
+fi
+input_file="$1"
+
+# Check if input file exists
+if [ ! -f "$input_file" ]; then
+    echo "Error: Input file '$input_file' not found." >&2
+    exit 1
+fi
+
+# Check if CSS file exists when specified
+if [ -n "$css_file" ] && [ ! -f "$css_file" ]; then
+    echo "Error: CSS file '$css_file' not found." >&2
+    exit 1
+fi
+
+# Determine base filename and output file
+base_name="${input_file%.*}"
+[ -z "$output_file" ] && output_file="${base_name}.pdf"
+
+# Temporary HTML file
+temp_html="${base_name}_temp.html"
+
+# Debugging output
+if $debug; then
+    echo "Input file: $input_file"
+    echo "Output file: $output_file"
+    echo "Temporary HTML: $temp_html"
+    [ -n "$css_file" ] && echo "CSS file: $css_file"
+fi
+
+# Construct Pandoc command
+pandoc_cmd=("pandoc" "-s" "$input_file" "-o" "$temp_html")
+[ -n "$css_file" ] && pandoc_cmd+=("-c" "$css_file")
+
+# Run Pandoc
+if $debug; then
+    echo "Running: ${pandoc_cmd[*]}"
+fi
+"${pandoc_cmd[@]}"
+
+# Convert HTML to PDF using WeasyPrint
+if $debug; then
+    echo "Running: weasyprint $temp_html $output_file"
+fi
+weasyprint "$temp_html" "$output_file"
+
+echo "Successfully created $output_file"
+
+# Remove temporary file unless keeping it
+if ! $keep; then
+    rm "$temp_html"
+else
+    echo "Kept temporary HTML file: $temp_html"
+fi
