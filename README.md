@@ -7,7 +7,7 @@ I've only done on Debian, but it should work on any system that supports bash/pa
 
 ## Usage:
 ```
-makeres -c ./style.css -o resume.pdf -k -d
+makeres -c ./style.css -o resume.pdf -k -d resume-sample.md
 ```
 -c  declare location of style-sheet for intermediate processing\
 *Default location for the style.css files is $HOME/.config/makeres/style.css*
